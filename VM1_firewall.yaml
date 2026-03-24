@@ -1,0 +1,77 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm1-firewall
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: vm1-firewall
+    spec:
+      domain:
+        cpu:
+          cores: 1
+        resources:
+          requests:
+            memory: 2Gi
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+            - name: cloudinitdisk
+              disk:
+                bus: virtio
+
+      networks:
+        - name: net-internet
+          pod: {}
+        - name: net-dmz
+          multus:
+            networkName: dmz-network
+        - name: net-lan
+          multus:
+            networkName: lan-network
+
+      interfaces:
+        - name: net-internet
+          masquerade: {}
+        - name: net-dmz
+          bridge: {}
+        - name: net-lan
+          bridge: {}
+
+      volumes:
+        - name: rootdisk
+          containerDisk:
+            image: quay.io/containerdisks/ubuntu:22.04
+
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              hostname: firewall
+
+              package_update: true
+
+              packages:
+                - iptables
+                - net-tools
+
+              runcmd:
+                # Activer le routage
+                - echo 1 > /proc/sys/net/ipv4/ip_forward
+
+                # Règles firewall
+                - iptables -F
+                - iptables -P FORWARD DROP
+
+                # Autoriser Internet -> Web (DMZ)
+                - iptables -A FORWARD -i eth0 -o eth1 -j ACCEPT
+
+                # Autoriser DB -> Web
+                - iptables -A FORWARD -i eth2 -o eth1 -j ACCEPT
+
+                # Autoriser DB -> Internet
+                - iptables -A FORWARD -i eth2 -o eth0 -j ACCEPT
