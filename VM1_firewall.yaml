@@ -24,7 +24,7 @@ spec:
               disk:
                 bus: virtio
 
-      networks:
+  networks:
   - name: default
     pod: {}
   - name: dmz
