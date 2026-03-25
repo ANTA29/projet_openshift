@@ -1,79 +1,177 @@
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
-  name: vm1-firewall
+  annotations:
+    kubemacpool.io/transaction-timestamp: '2026-03-25T00:17:52.312653611Z'
+    kubevirt.io/latest-observed-api-version: v1
+    kubevirt.io/storage-observed-api-version: v1
+  resourceVersion: '5210126644'
+  name: vm1
+  uid: ac4b2097-716a-4ba5-96b8-8ebfa9e2787d
+  creationTimestamp: '2026-03-25T00:17:52Z'
+  generation: 1
+  managedFields:
+    - apiVersion: kubevirt.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:spec':
+          .: {}
+          'f:runStrategy': {}
+          'f:template':
+            .: {}
+            'f:metadata':
+              .: {}
+              'f:labels':
+                .: {}
+                'f:kubevirt.io/domain': {}
+            'f:spec':
+              .: {}
+              'f:domain':
+                .: {}
+                'f:cpu':
+                  .: {}
+                  'f:cores': {}
+                'f:devices':
+                  .: {}
+                  'f:disks': {}
+                  'f:interfaces': {}
+                'f:resources':
+                  .: {}
+                  'f:requests':
+                    .: {}
+                    'f:memory': {}
+              'f:networks': {}
+              'f:volumes': {}
+      manager: Mozilla
+      operation: Update
+      time: '2026-03-25T00:17:52Z'
+    - apiVersion: kubevirt.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:kubevirt.io/latest-observed-api-version': {}
+            'f:kubevirt.io/storage-observed-api-version': {}
+          'f:finalizers':
+            .: {}
+            'v:"kubevirt.io/virtualMachineControllerFinalize"': {}
+      manager: virt-controller
+      operation: Update
+      time: '2026-03-25T00:17:52Z'
+    - apiVersion: kubevirt.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:status':
+          .: {}
+          'f:conditions': {}
+          'f:desiredGeneration': {}
+          'f:observedGeneration': {}
+          'f:printableStatus': {}
+          'f:runStrategy': {}
+          'f:volumeSnapshotStatuses': {}
+      manager: virt-controller
+      operation: Update
+      subresource: status
+      time: '2026-03-25T07:12:31Z'
+  namespace: anta-niasse-dev
+  finalizers:
+    - kubevirt.io/virtualMachineControllerFinalize
 spec:
-  running: true
+  runStrategy: Manual
   template:
     metadata:
+      creationTimestamp: null
       labels:
-        kubevirt.io/domain: vm1-firewall
+        kubevirt.io/domain: vm1
     spec:
+      architecture: amd64
       domain:
         cpu:
           cores: 1
-        resources:
-          requests:
-            memory: 2Gi
         devices:
           disks:
-            - name: rootdisk
-              disk:
+            - disk:
                 bus: virtio
-            - name: cloudinitdisk
-              disk:
+              name: rootdisk
+            - disk:
                 bus: virtio
-
-  networks:
-  - name: default
-    pod: {}
-  - name: dmz
-    multus:
-      networkName: dmz-network
-  - name: lan
-    multus:
-      networkName: lan-network
-
-domain:
-  devices:
-    interfaces:
-      - name: default
-        masquerade: {}
-      - name: dmz
-        bridge: {}
-      - name: lan
-        bridge: {}
-
+              name: cloudinitdisk
+          interfaces:
+            - macAddress: '02:04:b0:40:17:91'
+              masquerade: {}
+              name: default
+            - bridge: {}
+              macAddress: '02:04:b0:40:17:92'
+              name: dmz
+            - bridge: {}
+              macAddress: '02:04:b0:40:17:93'
+              name: lan
+        firmware:
+          serial: f850c080-9c11-4de9-89d4-166f7e60f068
+          uuid: ea22d90d-afb7-4318-9ffc-8832b8a24556
+        machine:
+          type: pc-q35-rhel9.6.0
+        resources:
+          limits:
+            memory: 2Gi
+          requests:
+            memory: 2Gi
+      networks:
+        - name: default
+          pod: {}
+        - multus:
+            networkName: dmz-network
+          name: dmz
+        - multus:
+            networkName: lan-network
+          name: lan
+      tolerations:
+        - effect: NoSchedule
+          key: sandbox-cnv
+          operator: Exists
       volumes:
-        - name: rootdisk
-          containerDisk:
-            image: quay.io/containerdisks/ubuntu:22.04
-
-        - name: cloudinitdisk
-          cloudInitNoCloud:
+        - containerDisk:
+            image: 'quay.io/containerdisks/ubuntu:22.04'
+          name: rootdisk
+        - cloudInitNoCloud:
             userData: |
               #cloud-config
-              hostname: firewall
-
+              chpasswd:
+                expire: false
+              hostname: VM1_firewall
               package_update: true
-
               packages:
-                - iptables
-                - net-tools
-
+              - iptables
+              - net-tools
+              password: open
               runcmd:
-                # Activer le routage
-                - echo 1 > /proc/sys/net/ipv4/ip_forward
-
-                # Règles firewall
-                - iptables -F
-                - iptables -P FORWARD DROP
-
-                # Autoriser Internet -> Web (DMZ)
-                - iptables -A FORWARD -i eth0 -o eth1 -j ACCEPT
-
-                # Autoriser DB -> Web
-                - iptables -A FORWARD -i eth2 -o eth1 -j ACCEPT
-
-                # Autoriser DB -> Internet
-                - iptables -A FORWARD -i eth2 -o eth0 -j ACCEPT
+              - echo 1 > /proc/sys/net/ipv4/ip_forward
+              - iptables -F
+              - iptables -P FORWARD DROP
+              - iptables -A FORWARD -i eth0 -o eth1 -j ACCEPT
+              - iptables -A FORWARD -i eth2 -o eth1 -j ACCEPT
+              - iptables -A FORWARD -i eth2 -o eth0 -j ACCEPT
+              ssh_authorized_keys:
+              - |
+                ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDWLVjB2r2pRquMPtmI/8brPq9vwc8/PJzih1/Alnbkmhv60W0EuB5adWPktX8MHsKZnaClNGrYqj18P3beD6j66RmiJkuppl0TACDb6PqfuN/E0SSbuHw8xPZLp50XKj71AITW34h9JeoX8NDVVS0d1Y3+ySXO4ITAhxWAIROCafV8CQvJEPy72/IcdLj21PVznLxb2uR82LrI06acHM+0psIf98ZqTi4u2to0P4XIYLbWZdkjS2o4dim/9YV11GrR09YfnTNPhjhtOt+e/s5ZbvE/KahFriKuwXUaII7x0NvcMSmj7dgGu3HxLNe1mZrdmTQNmfZ6UcvT+AniCShXOdHRckeK6oLvkdx1J0qUA0a0Ze0VkKSa4f1uC+I5Svs3jqFqmy2Uu8REVaajAOyyLj8Y2wacZwdlaINwPM1u5ewFezhIp1L+xzGiMEZYkGBywmldoJyTa/mBTWxt4pBDqitiGrWPjckFNBGk14ebG7AwFh5KiG0impvZxPkbMFE= sandbox@cnv
+              user: ubuntu
+          name: cloudinitdisk
+status:
+  conditions:
+    - lastProbeTime: '2026-03-25T07:12:31Z'
+      lastTransitionTime: '2026-03-25T07:12:31Z'
+      message: VMI does not exist
+      reason: VMINotExists
+      status: 'False'
+      type: Ready
+  desiredGeneration: 1
+  observedGeneration: 1
+  printableStatus: Stopped
+  runStrategy: Manual
+  volumeSnapshotStatuses:
+    - enabled: false
+      name: rootdisk
+      reason: 'Snapshot is not supported for this volumeSource type [rootdisk]'
+    - enabled: false
+      name: cloudinitdisk
+      reason: 'Snapshot is not supported for this volumeSource type [cloudinitdisk]'
